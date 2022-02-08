@@ -18,7 +18,7 @@ from pyquery import PyQuery
 #from requests_cache.core import remove_expired_responses
 
 CACHE_FILE = os.path.join(tempfile.gettempdir(), 'metallum_cache')
-requests_cache.install_cache(cache_name=CACHE_FILE, expire_after=300)
+requests_cache.install_cache(cache_name=CACHE_FILE, expire_after=999999999999999)
 #remove_expired_responses()
 
 # Site details
@@ -203,7 +203,7 @@ class Metallum(object):
             'User-Agent': USER_AGENT,
             'Accept-Encoding': 'gzip'
         }
-
+    
         self._content = self._fetch_page_content(url)
         self._page = PyQuery(self._content)
 
@@ -399,6 +399,9 @@ class Band(MetallumEntity):
     def __repr__(self):
         return '<Band: {0}>'.format(self.name)
 
+    def __hash__(self) -> int:
+        return hash(self.id)
+
     @property
     def id(self) -> str:
         """
@@ -544,6 +547,24 @@ class Band(MetallumEntity):
         return SimilarArtists(url, SimilarArtistsResult)
 
 
+
+    @property
+    def to_object(self):
+        return {
+            "id":self.id,
+            "name":self.name,
+            "country":self.country,
+            "location":self.location,
+            "genres":self.genres,
+            "logo":self.logo,
+            "sim_artists": self.similar_artists.to_id_list
+        }
+
+
+    @property
+    def to_json(self):
+        return json.dumps(self.to_object)       
+
 class SimilarArtists(Metallum, list):
     """Entries in the similar artists tab
     """
@@ -571,6 +592,11 @@ class SimilarArtists(Metallum, list):
         names = list(map(similar_artist_str, self))
         s = ' | '.join(names)
         return '<SimilarArtists: {0}>'.format(s)
+    
+    @property
+    def to_id_list(self):
+        artistsList = list(map(lambda artist: {"id":artist.id, "name":artist.name}, self))
+        return artistsList
 
 
 class SimilarArtistsResult(list):
